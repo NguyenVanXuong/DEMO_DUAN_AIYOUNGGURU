@@ -1,2 +1,5 @@
 streamlit
-openai
+ultralytics
+opencv-python-headless
+pillow
+numpy
