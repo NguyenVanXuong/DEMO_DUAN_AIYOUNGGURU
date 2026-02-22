@@ -33,4 +33,4 @@ if uploaded_file:
     # response = model.generate_content([prompt, image])
 
     st.subheader("Kết quả phân tích:")
-    st.write(AN TOAN)
+    st.write("AN TOAN")
