@@ -11,7 +11,7 @@ st.title("🚆 HỆ THỐNG CẢNH BÁO AN TOÀN ĐƯỜNG SẮT (Gemini AI)")
 # Load API key
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 
-model = genai.GenerativeModel("gemini-1.5-flash")
+model = genai.GenerativeModel("gemini-pro-vision")
 
 uploaded_file = st.file_uploader("📤 Tải ảnh hiện trường", type=["jpg", "jpeg", "png"])
 
