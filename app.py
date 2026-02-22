@@ -1,62 +1,36 @@
 import streamlit as st
-from ultralytics import YOLO
-import cv2
-import numpy as np
+import google.generativeai as genai
 from PIL import Image
+import io
+import os
 
 st.set_page_config(page_title="AI Cảnh Báo Đường Sắt", layout="wide")
 
-st.title("🚆 HỆ THỐNG CẢNH BÁO AN TOÀN ĐƯỜNG SẮT (YOLOv8)")
+st.title("🚆 HỆ THỐNG CẢNH BÁO AN TOÀN ĐƯỜNG SẮT (Gemini AI)")
 
-# Load model
-@st.cache_resource
-def load_model():
-    model = YOLO("yolov8n.pt")  # model nhẹ, chạy được trên Streamlit Cloud
-    return model
+# Load API key
+genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 
-model = load_model()
+model = genai.GenerativeModel("gemini-1.5-flash")
 
-uploaded_file = st.file_uploader("📤 Tải ảnh lên", type=["jpg", "jpeg", "png"])
+uploaded_file = st.file_uploader("📤 Tải ảnh hiện trường", type=["jpg", "jpeg", "png"])
 
 if uploaded_file:
     image = Image.open(uploaded_file)
-    img_np = np.array(image)
-
     st.image(image, caption="Ảnh gốc", use_column_width=True)
 
-    # Detect
-    results = model(img_np)
+    prompt = """
+    Bạn là hệ thống AI cảnh báo an toàn đường sắt.
 
-    annotated_frame = results[0].plot()
+    Phân tích ảnh và cho biết:
+    1. Có người, xe, vật cản, gia súc trên đường ray không?
+    2. Có tình huống nguy hiểm không?
+    3. Mức cảnh báo: An toàn / Trung bình / Nguy hiểm cao / Dừng khẩn cấp.
 
-    st.subheader("📌 Kết quả nhận diện")
-    st.image(annotated_frame, caption="Ảnh sau khi nhận diện", use_column_width=True)
+    Trả lời ngắn gọn, rõ ràng.
+    """
 
-    # Phân tích mức độ nguy hiểm
-    detected_objects = []
+    response = model.generate_content([prompt, image])
 
-    for box in results[0].boxes:
-        cls_id = int(box.cls[0])
-        label = model.names[cls_id]
-        detected_objects.append(label)
-
-    st.write("### 🧾 Danh sách vật thể phát hiện:")
-    st.write(detected_objects)
-
-    # Logic cảnh báo
-    warning_level = "An toàn"
-    color = "green"
-
-    if "person" in detected_objects:
-        warning_level = "⚠️ CẢNH BÁO TRUNG BÌNH"
-        color = "orange"
-
-    if "car" in detected_objects or "truck" in detected_objects or "bus" in detected_objects:
-        warning_level = "🚨 NGUY HIỂM CAO"
-        color = "red"
-
-    if "train" in detected_objects:
-        warning_level = "🛑 DỪNG KHẨN CẤP"
-        color = "darkred"
-
-    st.markdown(f"## <span style='color:{color}'>{warning_level}</span>", unsafe_allow_html=True)
+    st.subheader("📌 Kết quả phân tích AI")
+    st.write(response.text)
