@@ -33,7 +33,7 @@ if uploaded_file is not None:
                     "content": """Bạn là hệ thống cảnh báo an toàn đường sắt.
 Phân tích hình ảnh và trả về JSON theo cấu trúc:
 {
-  "muc_canh_bao": "Thap/Trung binh/Cao/Nguy cap",
+  "muc_canh_bao": "Thap/Trung binh/Cao/Khan cap",
   "loai_nguy_hiem": "...",
   "ly_do": "...",
   "de_xuat": "..."
