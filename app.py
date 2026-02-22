@@ -1,61 +1,62 @@
 import streamlit as st
-from openai import OpenAI
-import base64
-import json
+from ultralytics import YOLO
+import cv2
+import numpy as np
+from PIL import Image
 
-# --- Cấu hình trang ---
-st.set_page_config(page_title="AI Cảnh Báo Đường Sắt", layout="centered")
+st.set_page_config(page_title="AI Cảnh Báo Đường Sắt", layout="wide")
 
-st.title("🚆 HỆ THỐNG CẢNH BÁO NGUY HIỂM ĐƯỜNG SẮT (DEMO)")
-st.write("Tải ảnh hiện trường đường ray để hệ thống AI phân tích mức độ nguy hiểm.")
+st.title("🚆 HỆ THỐNG CẢNH BÁO AN TOÀN ĐƯỜNG SẮT (YOLOv8)")
 
-# --- Nhập API key ---
-api_key = st.secrets["OPENAI_API_KEY"]
-client = OpenAI(api_key=api_key)
+# Load model
+@st.cache_resource
+def load_model():
+    model = YOLO("yolov8n.pt")  # model nhẹ, chạy được trên Streamlit Cloud
+    return model
 
-# --- Upload ảnh ---
-uploaded_file = st.file_uploader("Tải ảnh lên", type=["jpg", "jpeg", "png"])
+model = load_model()
 
-if uploaded_file is not None:
+uploaded_file = st.file_uploader("📤 Tải ảnh lên", type=["jpg", "jpeg", "png"])
 
-    image_bytes = uploaded_file.read()
-    encoded_image = base64.b64encode(image_bytes).decode("utf-8")
+if uploaded_file:
+    image = Image.open(uploaded_file)
+    img_np = np.array(image)
 
-    st.image(uploaded_file, caption="Ảnh đã tải lên", use_column_width=True)
+    st.image(image, caption="Ảnh gốc", use_column_width=True)
 
-    with st.spinner("AI đang phân tích..."):
+    # Detect
+    results = model(img_np)
 
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {
-                    "role": "system",
-                    "content": """Bạn là hệ thống cảnh báo an toàn đường sắt.
-Phân tích hình ảnh và trả về JSON theo cấu trúc:
-{
-  "muc_canh_bao": "Thap/Trung binh/Cao/Khan cap",
-  "loai_nguy_hiem": "...",
-  "ly_do": "...",
-  "de_xuat": "..."
-}"""
-                },
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": "Phân tích mức độ nguy hiểm."},
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/jpeg;base64,{encoded_image}"
-                            },
-                        },
-                    ],
-                }
-            ],
-            max_tokens=500,
-        )
+    annotated_frame = results[0].plot()
 
-        result = response.choices[0].message.content
+    st.subheader("📌 Kết quả nhận diện")
+    st.image(annotated_frame, caption="Ảnh sau khi nhận diện", use_column_width=True)
 
-    st.subheader("📊 Kết quả phân tích:")
-    st.write(result)
+    # Phân tích mức độ nguy hiểm
+    detected_objects = []
+
+    for box in results[0].boxes:
+        cls_id = int(box.cls[0])
+        label = model.names[cls_id]
+        detected_objects.append(label)
+
+    st.write("### 🧾 Danh sách vật thể phát hiện:")
+    st.write(detected_objects)
+
+    # Logic cảnh báo
+    warning_level = "An toàn"
+    color = "green"
+
+    if "person" in detected_objects:
+        warning_level = "⚠️ CẢNH BÁO TRUNG BÌNH"
+        color = "orange"
+
+    if "car" in detected_objects or "truck" in detected_objects or "bus" in detected_objects:
+        warning_level = "🚨 NGUY HIỂM CAO"
+        color = "red"
+
+    if "train" in detected_objects:
+        warning_level = "🛑 DỪNG KHẨN CẤP"
+        color = "darkred"
+
+    st.markdown(f"## <span style='color:{color}'>{warning_level}</span>", unsafe_allow_html=True)
