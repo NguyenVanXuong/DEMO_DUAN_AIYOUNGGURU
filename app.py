@@ -26,7 +26,7 @@ if uploaded_file is not None:
     with st.spinner("AI đang phân tích..."):
 
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4o",
             messages=[
                 {
                     "role": "system",
